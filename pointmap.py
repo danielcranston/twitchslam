@@ -3,10 +3,10 @@ from constants import CULLING_ERR_THRES
 from frame import Frame
 import time
 import numpy as np
-import g2o
+
 import json
 
-from optimize_g2o import optimize
+
 #from optimize_crappy import optimize
 
 LOCAL_WINDOW = 20
@@ -31,7 +31,7 @@ class Point(object):
 
   def orb_distance(self, des):
     return min([hamming_distance(o, des) for o in self.orb()])
-  
+
   def delete(self):
     for f,idx in zip(self.frames, self.idxs):
       f.pts[idx] = None
@@ -57,7 +57,7 @@ class Map(object):
     ret['frames'] = []
     for f in self.frames:
       ret['frames'].append({
-        'id': f.id, 'K': f.K.tolist(), 'pose': f.pose.tolist(), 'h': f.h, 'w': f.w, 
+        'id': f.id, 'K': f.K.tolist(), 'pose': f.pose.tolist(), 'h': f.h, 'w': f.w,
         'kpus': f.kpus.tolist(), 'des': f.des.tolist(),
         'pts': [p.id if p is not None else -1 for p in f.pts]})
     ret['max_frame'] = self.max_frame
@@ -101,30 +101,29 @@ class Map(object):
     return ret
 
   # *** optimizer ***
-  
-  def optimize(self, local_window=LOCAL_WINDOW, fix_points=False, verbose=False, rounds=50):
-    err = optimize(self.frames, self.points, local_window, fix_points, verbose, rounds)
 
-    # prune points
-    culled_pt_count = 0
-    for p in self.points:
-      # <= 4 match point that's old
-      old_point = len(p.frames) <= 4 and p.frames[-1].id+7 < self.max_frame
-
-      # compute reprojection error
-      errs = []
-      for f,idx in zip(p.frames, p.idxs):
-        uv = f.kps[idx]
-        proj = np.dot(f.pose[:3], p.homogeneous())
-        proj = proj[0:2] / proj[2]
-        errs.append(np.linalg.norm(proj-uv))
-
-      # cull
-      if old_point or np.mean(errs) > CULLING_ERR_THRES:
-        culled_pt_count += 1
-        self.points.remove(p)
-        p.delete()
-    print("Culled:   %d points" % (culled_pt_count))
+  # def optimize(self, local_window=LOCAL_WINDOW, fix_points=False, verbose=False, rounds=50):
+  #   err = optimize(self.frames, self.points, local_window, fix_points, verbose, rounds)
+  #
+  #   # prune points
+  #   culled_pt_count = 0
+  #   for p in self.points:
+  #     # <= 4 match point that's old
+  #     old_point = len(p.frames) <= 4 and p.frames[-1].id+7 < self.max_frame
+  #
+  #     # compute reprojection error
+  #     errs = []
+  #     for f,idx in zip(p.frames, p.idxs):
+  #       uv = f.kps[idx]
+  #       proj = np.dot(f.pose[:3], p.homogeneous())
+  #       proj = proj[0:2] / proj[2]
+  #       errs.append(np.linalg.norm(proj-uv))
+  #
+  #     # cull
+  #     if old_point or np.mean(errs) > CULLING_ERR_THRES:
+  #       culled_pt_count += 1
+  #       self.points.remove(p)
+  #       p.delete()
+  #   print("Culled:   %d points" % (culled_pt_count))
 
     return err
-
